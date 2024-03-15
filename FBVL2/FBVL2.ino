@@ -258,16 +258,16 @@ void setup() {
     if ((CalValue == "") && (i >= 1)) {
       Serial.println("reboot device by disable pin EN in 30 min ");
       flashOutput(30, 400, Pin_led);
-      delay(1800000);
+      //delay(1800000);
       // Pause the programm
-      digitalWrite(Pin_Reset, HIGH);
-      delay(10000);
-      //    String SleepInfo = "Sleep mode activation because no able to initialise modem";
-      //    int SleepTime = 120;
-      //    Serial.print("Sleep mode actiovated because not able to initialise the modem for ");
-      //    Serial.print(SleepTime);
-      //    Serial.println(" minutes");
-      //    Sleep(SleepInfo, SleepTime);
+      //digitalWrite(Pin_Reset, HIGH);
+      //delay(10000);
+          String SleepInfo = "Sleep mode activation because no able to initialise modem";
+          int SleepTime = 120;
+          Serial.print("Sleep mode actiovated because not able to initialise the modem for ");
+          Serial.print(SleepTime);
+          Serial.println(" minutes");
+          Sleep(SleepInfo, SleepTime);
     }
   }
 
@@ -526,14 +526,14 @@ void loop() {
         flag_reboot++;
         if (flag_reboot >= 3) {
           Serial.print("reboot device by disable pin EN ");
-          digitalWrite(Pin_Reset, HIGH);
-          //          Serial.println("------>  go to sleep mode for 120 minutes because not able to send data info");
-          //          SleepInfo = "Sleep mode activation because undervoltage on battery";
-          //          SleepTime = 120;
-          //          Serial.print("ESP32 goes to sleep for ");
-          //          Serial.print(SleepTime);
-          //          Serial.println(" minutes");
-          //          Sleep(SleepInfo, SleepTime);
+         // digitalWrite(Pin_Reset, HIGH);
+                    Serial.println("------>  go to sleep mode for 120 minutes because not able to send data info");
+                    SleepInfo = "Sleep mode activation because undervoltage on battery";
+                    SleepTime = 120;
+                    Serial.print("ESP32 goes to sleep for ");
+                    Serial.print(SleepTime);
+                    Serial.println(" minutes");
+                    Sleep(SleepInfo, SleepTime);
         }
       }
 

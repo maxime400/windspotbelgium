@@ -393,67 +393,10 @@ void loop() {
 
 
 
-  if (delta > 300) {
+  if (delta > 60) {
 
-
-    digitalWrite(Pin_led, HIGH);
-    // -- Read sleeping mode
-    Serial.println("-->  Init Modem for GETTING Sleep info ");
-//    InitModem();
-    Serial.println("-->  Start JSONFromWeb for Sleep info ");
-//    String RequestData =      "api_key=" + apiKeyValue +
-//                              "";
-    sleepstatus = "";
-    //    StopModem();
-    Serial.println("-->  Stop Modem");
-    Serial.print("-->  read sleeping status:");
-    Serial.println(sleepstatus);
-
-
-    const size_t capacity = JSON_OBJECT_SIZE(2) + 50;
-    DynamicJsonBuffer jsonBuffer(capacity);
-
-    JsonObject& root = jsonBuffer.parseObject(sleepstatus);
-    if (!root.success()) {
-      Serial.println("parseObject() failed");
-    }
-    String SleepOrAwake = root["SleepOrAwake"];
-    String SleepTime_str = root["SleepTime"];     // SleepTime from WebServer is in minutes
-    Serial.print("Json object tell us to sleep or to be awake; ");
-    Serial.println(SleepOrAwake);
-    Serial.print("Json object tell us to continue sleeping till; ");
-    Serial.print(SleepTime_str);
-    Serial.println(" hours");
-
-    // if sleep
-    if ( SleepOrAwake == "Sleep") {
-      int SleepTime = SleepTime_str.toInt();
-      String SleepInfo = "Scheduled sleep";
-      Serial.print("ESP32 goes to sleep for ");
-      Serial.print(SleepTime);
-      Serial.println(" minutes");
-//      String RequestData =      "api_key=" + apiKeyValue +
-//                                "&SleepInfo=" + String(SleepInfo) +
-//                                "&SleepTime=" + String(SleepTime) +
-//                                "";
-      String SendStatus = "";
-      int flag_reboot = 0;
-      while ((SendStatus == "") && (flag_reboot < 5)) {
-
-        flag_reboot++;
-        if (flag_reboot >= 5) {
-          Serial.print("Reboot device by disable pin EN ");
-          Sleep("reboot auto because no hardware reset", 1);
-          digitalWrite(Pin_Reset, LOW);
-        }
-      }
-
-      Serial.println("Go to sleep mode based on activation time:");
-      Serial.println(SendStatus);
-      Sleep(SleepInfo, SleepTime);
-      // if awake
-    } else {
-
+    
+    Serial.println("---->Start calculating and formatting data before sending...  ");
       int n = sizeof(table_speed) / sizeof(table_speed[0]);
       speed_max = table_speed[0];
       speed_min = table_speed[0];
@@ -504,9 +447,10 @@ void loop() {
       int flag_reboot = 0;
       while ((SendStatus == "") && (flag_reboot < 5)) {
         Serial.println("----> Init Modem to SEND data to webpage ");
+        delay(10000);
         InitModem();
         Serial.println("----> Start MQTT to send wind data info ");
-        if (mqttConnect("wind_data", "test plein de data")){
+        if (mqttConnect("FBVL0/wind_data", "test plein de data")){
           SendStatus = "OK";
           Serial.println("---->  MQTT send successful... ");
         } else {
@@ -550,7 +494,7 @@ void loop() {
       NO = 0;
       NNO = 0;
 
-    }   //else  awake
+
 
     counter = millis() / 1000; // Re-write counter value due to delay in sending data
     counter_300s = counter;

@@ -68,11 +68,9 @@ const char gprsUser[] = "";
 const char gprsPass[] = "";
 
 // MQTT details
-const char *broker = "windspotbelgium.com";
-
-const char *topicLed = "GsmClientTest/led";
-const char *topicInit = "GsmClientTest/init";
-const char *topicLedStatus = "GsmClientTest/ledStatus";
+const char* mqtt_server = "windspotbelgium.com";
+const int mqtt_port = 1883; // Default MQTT port
+const char* mqtt_topic = "FBVL0/wind_data";
 
 #include <TinyGsmClient.h>
 #include <PubSubClient.h>
@@ -91,41 +89,26 @@ int ledStatus = LOW;
 
 uint32_t lastReconnectAttempt = 0;
 
-void mqttCallback(char *topic, byte *payload, unsigned int len)
-{
-    SerialMon.print("Message arrived [");
-    SerialMon.print(topic);
-    SerialMon.print("]: ");
-    SerialMon.write(payload, len);
-    SerialMon.println();
 
-    // Only proceed if incoming message's topic matches
-    if (String(topic) == topicLed) {
-        ledStatus = !ledStatus;
-        digitalWrite(LED_GPIO, ledStatus);
-        mqtt.publish(topicLedStatus, ledStatus ? "1" : "0");
-    }
+void callback(char* topic, byte* payload, unsigned int length) {
+  // Handle incoming messages if needed
 }
 
-boolean mqttConnect()
-{
-    SerialMon.print("Connecting to ");
-    SerialMon.print(broker);
-
-    // Connect to MQTT Broker
-    boolean status = mqtt.connect("GsmClientTest");
-
-    // Or, if you want to authenticate MQTT:
-    //boolean status = mqtt.connect("GsmClientName", "mqtt_user", "mqtt_pass");
-
-    if (status == false) {
-        SerialMon.println(" fail");
-        return false;
+void reconnect() {
+  // Loop until we're reconnected
+  while (!mqtt.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Attempt to connect
+    if (mqtt.connect("ESP32Client")) {
+      Serial.println("connected");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(mqtt.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
     }
-    SerialMon.println(" success");
-    mqtt.publish(topicInit, "GsmClientTest started");
-    mqtt.subscribe(topicLed);
-    return mqtt.connected();
+  }
 }
 
 
@@ -188,27 +171,29 @@ void setup()
         SerialMon.println("GPRS connected");
     }
 
-    // MQTT Broker setup
-    mqtt.setServer(broker, 1883);
-    mqtt.setCallback(mqttCallback);
+  mqtt.setServer(mqtt_server, mqtt_port);
+  mqtt.setCallback(callback);
+
 }
 
-void loop()
-{
+void loop() {
+  if (!mqtt.connected()) {
+    reconnect();
+  }
+  mqtt.loop();
+  
 
-    if (!mqtt.connected()) {
-        SerialMon.println("=== MQTT NOT CONNECTED ===");
-        // Reconnect every 10 seconds
-        uint32_t t = millis();
-        if (t - lastReconnectAttempt > 10000L) {
-            lastReconnectAttempt = t;
-            if (mqttConnect()) {
-                lastReconnectAttempt = 0;
-            }
-        }
-        delay(100);
-        return;
-    }
-
-    mqtt.loop();
+  
+  // Convert sensor value to string
+  String data = String("test1,rest2");
+  
+  // Publish the data to the MQTT topic
+  SerialMon.print("publish data to ");
+  SerialMon.println(mqtt_topic);
+   SerialMon.print("data:  ");
+  SerialMon.println(data.c_str());
+  mqtt.publish(mqtt_topic, data.c_str());
+  
+  // Wait for some time before publishing again
+  delay(10000); // Adjust delay as needed
 }
