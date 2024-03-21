@@ -70,7 +70,8 @@ const char gprsPass[] = "";
 // MQTT details
 const char* mqtt_server = "windspotbelgium.com";
 const int mqtt_port = 1883; // Default MQTT port
-const char* mqtt_topic = "FBVL0/wind_data";
+const char* topic_data = "FBVL0/wind_data";
+const char* topic_calibration = "FBVL0/calibration";
 
 #include <TinyGsmClient.h>
 #include <PubSubClient.h>
@@ -85,13 +86,27 @@ TinyGsm modem(SerialAT);
 TinyGsmClient client(modem);
 PubSubClient mqtt(client);
 
-int ledStatus = LOW;
+
+// Variable to store incoming message
+String incomingMessage;
+int counter = 0;
 
 uint32_t lastReconnectAttempt = 0;
 
 
 void callback(char* topic, byte* payload, unsigned int length) {
   // Handle incoming messages if needed
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  incomingMessage = ""; // Clear the previous one
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+    incomingMessage += (char)payload[i];
+  }
+  Serial.println();
+  // Assuming payload is a string, convert it to an integer
+
 }
 
 void reconnect() {
@@ -101,6 +116,7 @@ void reconnect() {
     // Attempt to connect
     if (mqtt.connect("ESP32Client")) {
       Serial.println("connected");
+
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqtt.state());
@@ -177,23 +193,69 @@ void setup()
 }
 
 void loop() {
+
+    
+  //--------------- WRITE MQTT data -------------------
+  // Read MQTT data
   if (!mqtt.connected()) {
     reconnect();
   }
-  mqtt.loop();
-  
-
-  
+  incomingMessage = "";
+  counter = 0;
+  SerialMon.print("read mqtt data...");
+  while ((incomingMessage == "") && (counter < 20)){
+    SerialMon.print(".");
+    mqtt.subscribe(topic_calibration);
+    mqtt.loop();
+    delay(500);   
+    counter++;   
+  }
+  SerialMon.println(".");
+  if (counter >= 20){
+    SerialMon.println("mqtt subscribe topic_calibration connection issue --> goes to sleep");
+  }
+    
+  SerialMon.print("inComing message = ");
+  SerialMon.println(incomingMessage);
+  //--------------------------------------------------
+  //--------------- WRITE MQTT data -------------------
+  if (!mqtt.connected()) {
+    reconnect();
+  }
   // Convert sensor value to string
+  SerialMon.print("write mqtt data...");
+  counter = 0;
+  boolean success = false;
   String data = String("test1,rest2");
-  
   // Publish the data to the MQTT topic
-  SerialMon.print("publish data to ");
-  SerialMon.println(mqtt_topic);
-   SerialMon.print("data:  ");
-  SerialMon.println(data.c_str());
-  mqtt.publish(mqtt_topic, data.c_str());
+//  SerialMon.print("publish data to ");
+//  SerialMon.println(topic_data);
+//  SerialMon.print("data:  ");
+//  SerialMon.println(data.c_str());
+ // Attempt to publish data
+   while ((success == false) && (counter < 20)){
+        SerialMon.print(".");
+        if (mqtt.connected()) {
+          success = mqtt.publish(topic_data, data.c_str());
+          if (success) {
+            Serial.println("Data published successfully");
+          } else {
+            Serial.print(".");
+          }
+        }
+        delay(1000);
+        counter++;
+  }
+  SerialMon.println(".");
+  if (counter >= 20){
+    SerialMon.println("mqtt publish topic_data connection issue --> goes to sleep");
+  }
+
+
+
+  //--------------------------------------------------
   
   // Wait for some time before publishing again
-  delay(10000); // Adjust delay as needed
+  SerialMon.println("wait 30s...");
+  delay(30000); // Adjust delay as needed
 }
