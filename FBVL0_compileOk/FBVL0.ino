@@ -85,8 +85,8 @@ const char simPIN[]   = "1503";
 
 // Server details
 // The server variable can be just a domain name or it can have a subdomain. It depends on the service you are using
-const char server[] = "windspotbelgium.be"; // domain name: example.com, maker.ifttt.com, etc
-const char* serverName = "http://windspotbelgium.be/FBVL0/post-data.php";
+const char server[] = "windspotbelgium.com"; // domain name: example.com, maker.ifttt.com, etc
+const char* serverName = "http://windspotbelgium.com/FBVL0/post-data.php";
 char resource[] = "/FBVL0/post-data.php";
 char  serverSleepInfo[] = "/FBVL0/json/Sleep.php";
 char  serverGirouetteInfo[] = "/FBVL0/json/GirouetteCal.php";
@@ -172,15 +172,15 @@ unsigned long counterInterval = ResetDelay * 60 * 60 * 1000;
 
 
 // Analog input
-// const int Pin_batterie =  A11; //pin0
-const int Pin_Davis_ana =  A6;  // pin34 (davis green wire)
+const int Pin_batterie =  A11; //pin0
+const int Pin_Davis_ana =  A16;  // pin14  (davis green wire)
 
 // Digital input
 const int Pin_Davis_pulse =  12;  // pin12(davis black wire)
 
 // Digital output
 const int Pin_Enable = 33;  // pin35
-// const int Pin_Reset = 4;  // pin4	Not used now
+const int Pin_Reset = 4;  // pin4	Not used now
 const int Pin_led = 13; // pin13
 
 
@@ -221,10 +221,10 @@ void setup() {
 
 
   // ------------- Input/Output ------
-  pinMode(Pin_Enable, OUTPUT); // Always 1 - if 0 reboot module
+  pinMode(Pin_Reset, OUTPUT); // Always 1 - if 0 reboot module
   pinMode(Pin_Davis_pulse, INPUT); // pulse capteur
 
-//   digitalWrite(Pin_Enable, HIGH);
+  digitalWrite(Pin_Reset, LOW);
 
   pinMode(Pin_led, OUTPUT); // LED
 
@@ -246,25 +246,29 @@ void setup() {
   Serial.println("--> Modem initialisation done");
   while ((CalValue == "") && (i <= 3)) {
 
-    Serial.print("--> try read girouette calibration: test number ");
-    Serial.print(i);
-    Serial.println(" ...");
+    Serial.print("--> try JSON from Web: ");
+    Serial.println(i);
+
     CalValue = JSONFromWeb(RequestData3, serverGirouetteInfo);
-    Serial.print("result =");
+    Serial.println("--> Calibration value done ");
+    Serial.println("read girouette calibration =");
     Serial.println(CalValue);
-    flashOutput(6, 1000, Pin_led);
+    flashOutput(6, 400, Pin_led);
     i++;
 
     if ((CalValue == "") && (i >= 1)) {
-
-		flashOutput(30, 400, Pin_led);
-		delay(60000);	// pause 1 min
-		 String SleepInfo = "Sleep mode activation for 2 hours because no able to read girouette calibration";
-		 int SleepTime = 120;
-		 Serial.print("Sleep mode activation for 2 hours because no able to read girouette calibration");
-		 Serial.print(SleepTime);
-		 Serial.println(" minutes");
-		 Sleep(SleepInfo, SleepTime);
+      Serial.println("reboot device by disable pin EN in 30 min ");
+      flashOutput(30, 400, Pin_led);
+      delay(1800000);	// pause 30 min
+      // Pause the programm
+      digitalWrite(Pin_Reset, HIGH);
+      delay(10000);
+         String SleepInfo = "Sleep mode activation because no able to initialise modem";
+         int SleepTime = 120;
+         Serial.print("Sleep mode actiovated because not able to initialise the modem for ");
+         Serial.print(SleepTime);
+         Serial.println(" minutes");
+         Sleep(SleepInfo, SleepTime);
     }
   }
 
@@ -361,8 +365,8 @@ void setup() {
 
 void loop() {
 
-  
-  digitalWrite(Pin_Enable, HIGH); // Active pin which give power to davis6410
+  //digitalWrite(Pin_Davis_pwr, HIGH); // Active pin which give power to davis6410
+
   attachInterrupt(digitalPinToInterrupt(Pin_Davis_pulse), isr_rotation, FALLING);
   countEnable = true;
   delay(4000);
@@ -385,14 +389,14 @@ void loop() {
 
   if (millis() - lastCounterReset >= counterInterval) {
     // ----------------- Loop every 24 hour ----------------------------//
-    SerialMon.println("Set Pin reset to high for 10 sec ");
+    SerialMon.print("Set Pin reset to high for 10 sec ");
     // Set the output pin HIGH
-//     digitalWrite(Pin_Reset, HIGH);
-//     Sleep("reboot auto because no hardware reset", 1);
+    digitalWrite(Pin_Reset, HIGH);
+    Sleep("reboot auto because no hardware reset", 1);
     // Wait for a short duration (e.g., 1 second) to ensure a noticeable pulse
-//     delay(10000);
-//     SerialMon.print("Set Pin reset to off");  // Should not be executed because PinREset the module just before
-//     digitalWrite(Pin_Reset, LOW);
+    delay(10000);
+    SerialMon.print("Set Pin reset to off");  // Should not be executed because PinREset the module just before
+    digitalWrite(Pin_Reset, LOW);
   }
 
 
@@ -450,7 +454,16 @@ void loop() {
                                 "";
       String SendStatus = "";
       int flag_reboot = 0;
-       SendStatus = SendInfoToWeb(RequestData, resource);
+      while ((SendStatus == "") && (flag_reboot < 5)) {
+        SendStatus = SendInfoToWeb(RequestData, resource);
+        flag_reboot++;
+        if (flag_reboot >= 5) {
+          Serial.print("Reboot device by disable pin EN ");
+          Sleep("reboot auto because no hardware reset", 1);
+          digitalWrite(Pin_Reset, LOW);
+        }
+      }
+
       Serial.println("Go to sleep mode based on activation time:");
       Serial.println(SendStatus);
       Sleep(SleepInfo, SleepTime);
@@ -509,29 +522,27 @@ void loop() {
       while ((SendStatus == "") && (flag_reboot < 5)) {
         //        Serial.println("----> Init Modem to SEND data to webpage ");
         //        InitModem();
-        Serial.print("----> Start POST to send wind data info, test ");
-        Serial.print(i);
-        Serial.println(" ...");
+        Serial.println("----> Start POST to send wind data info ");
         SendStatus = SendInfoToWeb(RequestData, resource);
         Serial.println("---->  POST ended... ");
-        Serial.print("---->  result =  ");
-        Serial.println(SendStatus);
         flag_reboot++;
         if (flag_reboot >= 3) {
-// 			Serial.print("reboot device by disable pin EN ");
-// 			digitalWrite(Pin_Reset, HIGH);
-			Serial.println("------>  go to sleep mode for 120 minutes because not able to send data info");
-			SleepInfo = "Sleep mode activation because undervoltage on battery";
-			SleepTime = 120;
-			Serial.print("ESP32 goes to sleep for ");
-			Serial.print(SleepTime);
-			Serial.println(" minutes");
-			Sleep(SleepInfo, SleepTime);
+          Serial.print("reboot device by disable pin EN ");
+          digitalWrite(Pin_Reset, HIGH);
+                   Serial.println("------>  go to sleep mode for 120 minutes because not able to send data info");
+                   SleepInfo = "Sleep mode activation because undervoltage on battery";
+                   SleepTime = 120;
+                   Serial.print("ESP32 goes to sleep for ");
+                   Serial.print(SleepTime);
+                   Serial.println(" minutes");
+                   Sleep(SleepInfo, SleepTime);
         }
       }
 
       StopModem();
-      Serial.println("-->  Data has been sent successfully");
+      Serial.println("-->  Stop Modem");
+      Serial.print("Sending status data to Web Server:");
+      Serial.println(SendStatus);
       Serial.println("Re-initialise variable");
       tsi = 0;
       N = 0;
