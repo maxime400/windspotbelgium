@@ -255,7 +255,7 @@ void setup() {
     flashOutput(6, 1000, Pin_led);
     i++;
 
-    if ((CalValue == "") && (i >= 1)) {
+    if ((CalValue == "") && (i >= 3)) {
 
 		flashOutput(30, 400, Pin_led);
 		delay(60000);	// pause 1 min
@@ -518,15 +518,15 @@ void loop() {
         Serial.println(SendStatus);
         flag_reboot++;
         if (flag_reboot >= 3) {
-// 			Serial.print("reboot device by disable pin EN ");
-// 			digitalWrite(Pin_Reset, HIGH);
-			Serial.println("------>  go to sleep mode for 120 minutes because not able to send data info");
-			SleepInfo = "Sleep mode activation because undervoltage on battery";
-			SleepTime = 120;
-			Serial.print("ESP32 goes to sleep for ");
-			Serial.print(SleepTime);
-			Serial.println(" minutes");
-			Sleep(SleepInfo, SleepTime);
+// 			  Serial.print("reboot device by disable pin EN ");
+// 			  digitalWrite(Pin_Reset, HIGH);
+			    Serial.println("------>  go to sleep mode for 120 minutes because not able to send data info");
+			    SleepInfo = "Sleep mode activation because undervoltage on battery";
+			    SleepTime = 120;
+			    Serial.print("ESP32 goes to sleep for ");
+			    Serial.print(SleepTime);
+			    Serial.println(" minutes");
+			    Sleep(SleepInfo, SleepTime);
         }
       }
 
