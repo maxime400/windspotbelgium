@@ -361,7 +361,7 @@ void setup() {
 
 void loop() {
 
-  
+
   digitalWrite(Pin_Enable, HIGH); // Active pin which give power to davis6410
   attachInterrupt(digitalPinToInterrupt(Pin_Davis_pulse), isr_rotation, FALLING);
   countEnable = true;
